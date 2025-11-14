@@ -81,23 +81,23 @@ async function waitForLocalStack(maxRetries = 10, retryDelay = 2000): Promise<vo
       const health = await response.json();
 
       if (health.services?.secretsmanager === 'available') {
-        logger.info('LocalStack is ready', {
+        logger.info({
           services: health.services,
-        });
+        }, 'LocalStack is ready');
         return;
       }
 
-      logger.warn('LocalStack is not ready, waiting...', {
+      logger.warn({
         attempt: i + 1,
         maxRetries,
         services: health.services,
-      });
+      }, 'LocalStack is not ready, waiting...');
     } catch (error) {
-      logger.warn('Failed to connect to LocalStack, retrying...', {
+      logger.warn({
         attempt: i + 1,
         maxRetries,
         error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      }, 'Failed to connect to LocalStack, retrying...');
     }
 
     if (i < maxRetries - 1) {
@@ -116,7 +116,7 @@ async function deleteExistingSecret(
   secretName: string
 ): Promise<void> {
   try {
-    logger.info('Checking if secret already exists', { secretName });
+    logger.info({ secretName }, 'Checking if secret already exists');
 
     await client.send(
       new DeleteSecretCommand({
@@ -125,17 +125,17 @@ async function deleteExistingSecret(
       })
     );
 
-    logger.info('Deleted existing secret', { secretName });
-  } catch (error: any) {
+    logger.info({ secretName }, 'Deleted existing secret');
+  } catch (error: unknown) {
     // If secret doesn't exist, that's okay
-    if (error.name === 'ResourceNotFoundException') {
-      logger.info('Secret does not exist, proceeding with creation', { secretName });
+    if (error instanceof Error && error.name === 'ResourceNotFoundException') {
+      logger.info({ secretName }, 'Secret does not exist, proceeding with creation');
       return;
     }
 
-    logger.warn('Error checking/deleting existing secret', {
-      error: error.message,
-    });
+    logger.warn({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }, 'Error checking/deleting existing secret');
   }
 }
 
@@ -148,10 +148,10 @@ async function createSecret(
   secrets: AppSecrets
 ): Promise<void> {
   try {
-    logger.info('Creating secret in LocalStack', {
+    logger.info({
       secretName,
       secretCount: Object.keys(secrets).length,
-    });
+    }, 'Creating secret in LocalStack');
 
     const command = new CreateSecretCommand({
       Name: secretName,
@@ -161,24 +161,24 @@ async function createSecret(
 
     const response = await client.send(command);
 
-    logger.info('Secret created successfully', {
+    logger.info({
       arn: response.ARN,
       name: response.Name,
       versionId: response.VersionId,
-    });
+    }, 'Secret created successfully');
   } catch (error) {
     if (error instanceof ResourceExistsException) {
-      logger.warn('Secret already exists, consider deleting first', {
+      logger.warn({
         secretName,
-      });
+      }, 'Secret already exists, consider deleting first');
       throw new Error(
         `Secret "${secretName}" already exists. Delete it first or use a different name.`
       );
     }
 
-    logger.error('Failed to create secret', {
+    logger.error({
       error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    }, 'Failed to create secret');
     throw error;
   }
 }
@@ -191,7 +191,7 @@ async function verifySecret(
   secretName: string
 ): Promise<void> {
   try {
-    logger.info('Verifying secret', { secretName });
+    logger.info({ secretName }, 'Verifying secret');
 
     const command = new GetSecretValueCommand({
       SecretId: secretName,
@@ -213,16 +213,16 @@ async function verifySecret(
       throw new Error(`Missing secrets: ${missingKeys.join(', ')}`);
     }
 
-    logger.info('Secret verified successfully', {
+    logger.info({
       secretCount: loadedKeys.length,
       keys: loadedKeys,
       arn: response.ARN,
       versionId: response.VersionId,
-    });
+    }, 'Secret verified successfully');
   } catch (error) {
-    logger.error('Failed to verify secret', {
+    logger.error({
       error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    }, 'Failed to verify secret');
     throw error;
   }
 }
@@ -233,11 +233,11 @@ async function verifySecret(
 async function setupLocalStack(): Promise<void> {
   const startTime = Date.now();
 
-  logger.info('Starting LocalStack setup', {
+  logger.info({
     endpoint: DEFAULT_CONFIG.endpoint,
     region: DEFAULT_CONFIG.region,
     secretName: DEFAULT_CONFIG.secretName,
-  });
+  }, 'Starting LocalStack setup');
 
   try {
     // Wait for LocalStack to be ready
@@ -257,10 +257,10 @@ async function setupLocalStack(): Promise<void> {
 
     const duration = Date.now() - startTime;
 
-    logger.info('LocalStack setup completed successfully', {
+    logger.info({
       duration: `${duration}ms`,
       secretsCreated: Object.keys(SAMPLE_SECRETS).length,
-    });
+    }, 'LocalStack setup completed successfully');
 
     console.log('\n✓ LocalStack setup completed successfully!');
     console.log('\nNext steps:');
@@ -269,10 +269,10 @@ async function setupLocalStack(): Promise<void> {
     console.log('3. Check health endpoint: http://localhost:3000/health');
     console.log('\nLocalStack health: http://localhost:4566/_localstack/health');
   } catch (error) {
-    logger.error('LocalStack setup failed', {
+    logger.error({
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-    });
+    }, 'LocalStack setup failed');
 
     console.error('\n✗ LocalStack setup failed!');
     console.error('\nTroubleshooting:');
