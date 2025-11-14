@@ -28,6 +28,73 @@ O modo de desenvolvimento do Vault:
 - **HTTP (não HTTPS)**: Comunicação sem TLS
 - **Não recomendado para produção**: Apenas para desenvolvimento local
 
+### Persistência de Dados em Dev Mode
+
+IMPORTANTE: O Vault em modo desenvolvimento NÃO persiste dados após restart do container.
+
+#### Por que os dados são perdidos
+
+O Vault Dev Mode armazena todos os dados em memória (RAM), não em disco:
+
+- **Storage In-Memory**: Todos os secrets existem apenas na RAM do container
+- **Sem Volume Mapeado**: Container não possui volume persistente configurado
+- **Comportamento Esperado**: Dev mode é projetado para testes rápidos e efêmeros
+- **Restart = Reset**: Cada vez que o container reinicia, o Vault volta ao estado inicial
+
+#### Workflow Recomendado
+
+Sempre que reiniciar os containers Docker, siga este fluxo:
+
+```bash
+# 1. Parar containers
+docker compose down
+
+# 2. Iniciar containers
+docker compose up -d
+
+# 3. Aguardar health check (10-15 segundos)
+docker compose ps
+
+# 4. Executar setup do Vault (OBRIGATÓRIO)
+pnpm setup:vault
+
+# 5. Iniciar aplicação
+pnpm demo:vault
+```
+
+O script `pnpm setup:vault` é rápido (aproximadamente 60ms) e:
+- Verifica se o Vault está pronto
+- Habilita KV v2 engine (se necessário)
+- Cria todos os 7 secrets de exemplo
+- Valida que os secrets foram criados corretamente
+
+#### Comparação com LocalStack
+
+| Característica | Vault Dev Mode | LocalStack |
+|---|---|---|
+| **Persistência** | Em memória (RAM) | Volume `./localstack-data` |
+| **Após restart** | Dados perdidos | Dados mantidos |
+| **Setup necessário** | Sempre após restart | Apenas primeira vez |
+| **Tempo de setup** | ~60ms | ~1000ms |
+| **Volume Docker** | Não configurado | Configurado |
+
+#### Por que não adicionar volume ao Vault Dev Mode?
+
+Adicionar volume ao Vault Dev Mode não resolve o problema porque:
+
+1. **Dev Mode ignora storage backend**: O modo de desenvolvimento força storage in-memory
+2. **Configuração específica**: Dev mode sobrescreve qualquer configuração de storage
+3. **Simplicidade intencional**: Dev mode é projetado para ser simples e descartável
+
+Para persistência real, seria necessário:
+- Sair do dev mode
+- Configurar Vault em modo production
+- Definir storage backend (file, consul, etc.)
+- Gerenciar unseal keys manualmente
+- Configurar TLS/HTTPS
+
+Isso adiciona complexidade desnecessária para um projeto didático.
+
 ## Pré-requisitos
 
 ### Ferramentas Necessárias
@@ -88,6 +155,7 @@ services:
       VAULT_DEV_ROOT_TOKEN_ID: 'root'
       VAULT_DEV_LISTEN_ADDRESS: '0.0.0.0:8200'
       VAULT_LOG_LEVEL: 'debug'
+      VAULT_ADDR: 'http://127.0.0.1:8200'
     cap_add:
       - IPC_LOCK
     healthcheck:
@@ -95,6 +163,7 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+      start_period: 5s
     networks:
       - secrets-net
 

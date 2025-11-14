@@ -384,6 +384,49 @@ export const HealthResponseSchema = z.object({
    - Registra handlers de graceful shutdown
    - Logging de status
 
+### Persistência e Restart de Containers
+
+#### Vault Provider
+
+**Comportamento**: Dados efêmeros (não persistem após restart)
+
+- **Storage**: In-memory (RAM) no dev mode
+- **Após `docker compose down`**: Todos os secrets são perdidos
+- **Workflow obrigatório**:
+  1. `docker compose up -d`
+  2. Aguardar health check (10-15s)
+  3. `pnpm setup:vault` (recriar secrets)
+  4. `pnpm demo:vault`
+
+**Tempo de setup**: Aproximadamente 60ms para recriar 7 secrets
+
+**Justificativa**: Vault dev mode é projetado para ser efêmero e simples, sem configuração de storage backend.
+
+#### LocalStack Provider
+
+**Comportamento**: Dados persistentes (mantidos após restart)
+
+- **Storage**: Volume Docker mapeado (`./localstack-data`)
+- **Após `docker compose down`**: Secrets são mantidos no volume
+- **Workflow simplificado**:
+  1. `docker compose up -d`
+  2. `pnpm demo:localstack` (setup apenas na primeira vez)
+
+**Tempo de setup inicial**: Aproximadamente 1000ms para criar 7 secrets
+
+**Vantagem**: Restart mais rápido sem necessidade de reconfiguração
+
+#### Comparação de Persistência
+
+| Aspecto | Vault Dev Mode | LocalStack |
+|---|---|---|
+| **Storage** | In-memory (RAM) | Volume Docker |
+| **Persistência** | ❌ Não | ✅ Sim |
+| **Setup após restart** | Obrigatório | Opcional |
+| **Tempo de setup** | ~60ms | ~1000ms |
+| **Volume mapeado** | Não | `./localstack-data` |
+| **Adequado para** | Testes rápidos | Desenvolvimento contínuo |
+
 ### Processamento de Requisição
 
 1. **Request chega ao Fastify**

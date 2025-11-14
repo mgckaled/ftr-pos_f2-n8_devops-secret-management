@@ -173,9 +173,129 @@ Resposta esperada:
     "secretsmanager": "available",
     "ssm": "available",
     "kms": "available"
-  }
+  },
+  "edition": "community",
+  "version": "4.10.x"
 }
 ```
+
+## Interface Web do LocalStack
+
+### LocalStack Community Edition (Versão Gratuita)
+
+O LocalStack Community Edition NÃO possui interface web gráfica completa como o Vault UI.
+
+#### Endpoints Disponíveis
+
+A versão Community oferece apenas endpoints JSON para diagnóstico:
+
+1. **Health Dashboard**:
+
+```bash
+curl http://localhost:4566/_localstack/health | jq
+```
+
+Retorna status de todos os serviços configurados (secretsmanager, ssm, kms).
+
+2. **Diagnóstico Completo**:
+
+```bash
+curl http://localhost:4566/_localstack/diagnose | jq
+```
+
+Retorna informações detalhadas:
+- Versão do LocalStack
+- Configuração completa
+- Status do Docker
+- File tree
+- Logs recentes
+
+3. **Configuração Atual**:
+
+```bash
+curl http://localhost:4566/_localstack/config | jq
+```
+
+Retorna todas as variáveis de configuração.
+
+#### Visualizar Secrets via AWS CLI
+
+Para ver os secrets criados, use a AWS CLI:
+
+```bash
+# Listar todos os secrets
+aws --endpoint-url=http://localhost:4566 \
+    --region us-east-1 \
+    secretsmanager list-secrets \
+    --no-sign-request | jq
+
+# Ver conteúdo de um secret específico
+aws --endpoint-url=http://localhost:4566 \
+    --region us-east-1 \
+    secretsmanager get-secret-value \
+    --secret-id "ARN_DO_SECRET" \
+    --no-sign-request | jq
+```
+
+Exemplo com o secret criado pelo setup:
+
+```bash
+# Listar secrets
+aws --endpoint-url=http://localhost:4566 \
+    --region us-east-1 \
+    secretsmanager list-secrets \
+    --no-sign-request
+
+# Obter ARN do secret (exemplo)
+# arn:aws:secretsmanager:us-east-1:000000000000:secret:app-secrets-AbCdEf
+
+# Ver conteúdo usando ARN
+aws --endpoint-url=http://localhost:4566 \
+    --region us-east-1 \
+    secretsmanager get-secret-value \
+    --secret-id "arn:aws:secretsmanager:us-east-1:000000000000:secret:app-secrets-AbCdEf" \
+    --no-sign-request \
+    --query SecretString \
+    --output text | jq
+```
+
+#### LocalStack Pro (Versão Paga)
+
+A versão Pro oferece recursos adicionais:
+
+- **Interface Web Completa**: Similar ao AWS Console real
+- **Resource Browser**: Visualização gráfica de todos os recursos
+- **Cloud Pods**: Snapshots persistentes de estado
+- **Advanced Features**: Integração com CI/CD, debugging avançado
+
+Mais informações: https://localstack.cloud/pricing
+
+#### Alternativas para Gerenciamento Visual
+
+Para a versão gratuita Community:
+
+1. **LocalStack Desktop** (Gratuito, limitado):
+   - Aplicação desktop com UI básica
+   - Download: https://localstack.cloud/desktop
+   - Recursos limitados comparado à versão Pro
+
+2. **AWS CLI com Scripts**:
+   - Scripts bash para operações comuns
+   - Automação TypeScript (como `pnpm setup:localstack`)
+
+3. **Commandeer** (Third-party):
+   - Ferramenta visual para gerenciar LocalStack e AWS
+   - Suporte a múltiplos serviços
+
+#### Comparação de Interfaces
+
+| Recurso | Vault UI (Grátis) | LocalStack Community | LocalStack Pro |
+|---|---|---|---|
+| **Interface Web** | ✅ Completa | ❌ Apenas JSON | ✅ Completa |
+| **Navegação Visual** | ✅ Tree view | ❌ CLI apenas | ✅ Resource browser |
+| **Criação de Secrets** | ✅ Forms | ⚠️ CLI/API | ✅ Forms |
+| **Versionamento Visual** | ✅ Sim | ❌ CLI apenas | ✅ Sim |
+| **Custo** | Gratuito | Gratuito | Pago |
 
 ## Configuração do AWS CLI para LocalStack
 

@@ -67,6 +67,32 @@ pnpm demo:localstack
 # http://localhost:3000/docs
 ```
 
+### Workflow Após Restart dos Containers
+
+IMPORTANTE: Vault Dev Mode não persiste dados após restart.
+
+```bash
+# 1. Parar containers
+docker compose down
+
+# 2. Iniciar containers
+docker compose up -d
+
+# 3. Aguardar health check (10-15 segundos)
+
+# 4a. Vault: Recriar secrets (OBRIGATÓRIO após restart)
+pnpm setup:vault
+pnpm demo:vault
+
+# 4b. LocalStack: Secrets já persistidos (setup opcional)
+pnpm demo:localstack
+```
+
+Diferenças de persistência:
+
+- **Vault Dev Mode**: Dados em memória, perdidos ao reiniciar (setup sempre necessário)
+- **LocalStack**: Dados persistidos em `./localstack-data` (setup apenas na primeira vez)
+
 ### Endpoints Disponíveis
 
 - `GET /health` - Status da aplicação e carregamento de secrets
@@ -133,17 +159,58 @@ pnpm dev                  # Inicia aplicação em modo desenvolvimento
 pnpm demo:vault           # Inicia com Vault provider
 pnpm demo:localstack      # Inicia com LocalStack provider
 
-# Setup automatizado
-pnpm setup:vault          # Configura Vault com secrets de exemplo
-pnpm setup:localstack     # Configura LocalStack com secrets de exemplo
+# Setup automatizado (TypeScript com tsx)
+pnpm setup:vault          # Configura Vault com secrets de exemplo (7 secrets)
+pnpm setup:localstack     # Configura LocalStack com secrets de exemplo (7 secrets)
 
 # Build
 pnpm build                # Compila TypeScript para JavaScript
+pnpm type-check           # Verificação de tipos TypeScript
 
 # Docker
 docker compose up -d      # Inicia Vault e LocalStack
 docker compose down       # Para containers
 docker compose logs -f    # Visualiza logs
+docker compose ps         # Status dos containers
+```
+
+### Interfaces de Gerenciamento
+
+#### Vault UI
+
+Acesse a interface web do Vault em:
+
+```plainttext
+URL: http://localhost:8200/ui
+Token: root
+Method: Token
+```
+
+Recursos disponíveis:
+
+- Navegação visual de secrets engines
+- Criação e edição de secrets via UI
+- Visualização de versões de secrets (KV v2)
+- Gerenciamento de políticas e tokens
+
+#### LocalStack
+
+LocalStack Community Edition não possui interface web gráfica completa.
+
+Endpoints disponíveis:
+
+```bash
+# Health check dos serviços
+curl http://localhost:4566/_localstack/health | jq
+
+# Diagnóstico completo
+curl http://localhost:4566/_localstack/diagnose | jq
+
+# Listar secrets via AWS CLI
+aws --endpoint-url=http://localhost:4566 \
+    --region us-east-1 \
+    secretsmanager list-secrets \
+    --no-sign-request
 ```
 
 ### Requisitos
