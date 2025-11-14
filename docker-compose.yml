@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # HashiCorp Vault (Bloco A)
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: vault-dev
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: 'root'
+      VAULT_DEV_LISTEN_ADDRESS: '0.0.0.0:8200'
+      VAULT_LOG_LEVEL: 'debug'
+    cap_add:
+      - IPC_LOCK
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - secrets-net
+
+  # LocalStack (AWS Services Simulator - Bloco B)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack-dev
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=secretsmanager,ssm,kms
+      - DEBUG=1
+      - AWS_DEFAULT_REGION=us-east-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./localstack-data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - secrets-net
+
+networks:
+  secrets-net:
+    driver: bridge
