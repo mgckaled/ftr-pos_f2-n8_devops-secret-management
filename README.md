@@ -1,6 +1,15 @@
+<!--markdownlint-disable-->
+
+<p align="center">
+  <img alt="Logo - Rocketseat" src="./.github/assets/images/logo_ftr.png" width="200px" />
+</p>
+
 # Secret Management em DevOps
 
 Repositório pessoal de registro, referência e suporte para fins de aprendizado, consulta e acompanhamento da disciplina de Secret Management em DevOps (Nível 8), Fase 2 (Estratégia e Inovação), do curso de Pós-Graduação Tech Developer 360, desenvolvido pela Faculdade de Tecnologia Rocketseat (FTR).
+
+>[!NOTE]
+> [Questionário Avaliativo](./.github/docs/content/assessments/q.md)
 
 ## Conteúdo Teórico
 
@@ -23,6 +32,8 @@ A implementação prática abrange desde a configuração inicial do AWS CLI e c
 
 > [!NOTE]
 > [AWS Secrets Manager, Systems Manager e KMS](./.github/docs/content/bloco-b.md)
+
+---
 
 ## Projeto
 
@@ -105,10 +116,10 @@ Diferenças de persistência:
 
 Documentação detalhada disponível em `src/docs/`:
 
-- `architecture.md` - Arquitetura e decisões técnicas
-- `vault-setup.md` - Guia completo de setup do Vault
-- `aws-localstack-setup.md` - Guia completo de setup do LocalStack
-- `security.md` - Práticas de segurança implementadas
+- [`architecture.md`](./src/docs/architecture.md) - Arquitetura e decisões técnicas
+- [`vault-setup.md`](./src/docs/vault-setup.md) - Guia completo de setup do Vault
+- [`aws-localstack-setup.md`](./src/docs/aws-localstack-setup.md) - Guia completo de setup do LocalStack
+- [`security.md`](./src/docs/security.md) - Práticas de segurança implementadas
 
 ### Estrutura do Projeto
 
