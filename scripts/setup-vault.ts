@@ -14,7 +14,7 @@
  *   pnpm setup:vault
  */
 
-import vault from 'node-vault';
+import vault, { type client as VaultClient } from 'node-vault';
 import { logger } from '../src/infra/logger.js';
 
 interface VaultSetupConfig {
@@ -36,7 +36,7 @@ interface AppSecrets {
 const DEFAULT_CONFIG: VaultSetupConfig = {
   endpoint: process.env.VAULT_ADDR || 'http://localhost:8200',
   token: process.env.VAULT_TOKEN || 'root',
-  secretPath: 'secret/app-secrets', // KV v2 path (without /data/)
+  secretPath: 'secret/data/widget-server', // KV v2 path (with /data/ for write operations)
 };
 
 const SAMPLE_SECRETS: AppSecrets = {
@@ -52,30 +52,30 @@ const SAMPLE_SECRETS: AppSecrets = {
 /**
  * Wait for Vault to be ready
  */
-async function waitForVault(client: any, maxRetries = 10, retryDelay = 2000): Promise<void> {
+async function waitForVault(client: VaultClient, maxRetries = 10, retryDelay = 2000): Promise<void> {
   for (let i = 0; i < maxRetries; i++) {
     try {
       const health = await client.health();
       if (!health.sealed && health.initialized) {
-        logger.info('Vault is ready', {
+        logger.info({
           sealed: health.sealed,
           initialized: health.initialized,
-        });
+        }, 'Vault is ready');
         return;
       }
 
-      logger.warn('Vault is not ready, waiting...', {
+      logger.warn({
         attempt: i + 1,
         maxRetries,
         sealed: health.sealed,
         initialized: health.initialized,
-      });
+      }, 'Vault is not ready, waiting...');
     } catch (error) {
-      logger.warn('Failed to connect to Vault, retrying...', {
+      logger.warn({
         attempt: i + 1,
         maxRetries,
         error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      }, 'Failed to connect to Vault, retrying...');
     }
 
     if (i < maxRetries - 1) {
@@ -89,16 +89,16 @@ async function waitForVault(client: any, maxRetries = 10, retryDelay = 2000): Pr
 /**
  * Enable KV v2 secrets engine if not already enabled
  */
-async function ensureKvEngine(client: any, mountPath = 'secret'): Promise<void> {
+async function ensureKvEngine(client: VaultClient, mountPath = 'secret'): Promise<void> {
   try {
     const mounts = await client.mounts();
 
     if (mounts[`${mountPath}/`]) {
-      logger.info('KV secrets engine already enabled', { mountPath });
+      logger.info({ mountPath }, 'KV secrets engine already enabled');
       return;
     }
 
-    logger.info('Enabling KV v2 secrets engine', { mountPath });
+    logger.info({ mountPath }, 'Enabling KV v2 secrets engine');
 
     await client.mount({
       mount_point: mountPath,
@@ -108,17 +108,17 @@ async function ensureKvEngine(client: any, mountPath = 'secret'): Promise<void> 
       },
     });
 
-    logger.info('KV v2 secrets engine enabled successfully', { mountPath });
+    logger.info({ mountPath }, 'KV v2 secrets engine enabled successfully');
   } catch (error) {
     // If error is "path is already in use", it's okay
     if (error instanceof Error && error.message.includes('path is already in use')) {
-      logger.info('KV secrets engine already exists', { mountPath });
+      logger.info({ mountPath }, 'KV secrets engine already exists');
       return;
     }
 
-    logger.error('Failed to enable KV secrets engine', {
+    logger.error({
       error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    }, 'Failed to enable KV secrets engine');
     throw error;
   }
 }
@@ -127,29 +127,29 @@ async function ensureKvEngine(client: any, mountPath = 'secret'): Promise<void> 
  * Create or update secrets in Vault
  */
 async function createSecrets(
-  client: any,
+  client: VaultClient,
   secretPath: string,
   secrets: AppSecrets
 ): Promise<void> {
   try {
-    logger.info('Creating secrets in Vault', {
+    logger.info({
       path: secretPath,
       secretCount: Object.keys(secrets).length,
-    });
+    }, 'Creating secrets in Vault');
 
     // KV v2 requires writing to path with /data/
     await client.write(`${secretPath}`, {
       data: secrets,
     });
 
-    logger.info('Secrets created successfully', {
+    logger.info({
       path: secretPath,
       keys: Object.keys(secrets),
-    });
+    }, 'Secrets created successfully');
   } catch (error) {
-    logger.error('Failed to create secrets', {
+    logger.error({
       error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    }, 'Failed to create secrets');
     throw error;
   }
 }
@@ -157,9 +157,9 @@ async function createSecrets(
 /**
  * Verify secrets were created correctly
  */
-async function verifySecrets(client: any, secretPath: string): Promise<void> {
+async function verifySecrets(client: VaultClient, secretPath: string): Promise<void> {
   try {
-    logger.info('Verifying secrets', { path: secretPath });
+    logger.info({ path: secretPath }, 'Verifying secrets');
 
     // Read from /data/ path for KV v2
     const result = await client.read(`${secretPath}`);
@@ -178,14 +178,14 @@ async function verifySecrets(client: any, secretPath: string): Promise<void> {
       throw new Error(`Missing secrets: ${missingKeys.join(', ')}`);
     }
 
-    logger.info('Secrets verified successfully', {
+    logger.info({
       secretCount: loadedKeys.length,
       keys: loadedKeys,
-    });
+    }, 'Secrets verified successfully');
   } catch (error) {
-    logger.error('Failed to verify secrets', {
+    logger.error({
       error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    }, 'Failed to verify secrets');
     throw error;
   }
 }
@@ -196,10 +196,10 @@ async function verifySecrets(client: any, secretPath: string): Promise<void> {
 async function setupVault(): Promise<void> {
   const startTime = Date.now();
 
-  logger.info('Starting Vault setup', {
+  logger.info({
     endpoint: DEFAULT_CONFIG.endpoint,
     secretPath: DEFAULT_CONFIG.secretPath,
-  });
+  }, 'Starting Vault setup');
 
   try {
     // Initialize Vault client
@@ -223,10 +223,10 @@ async function setupVault(): Promise<void> {
 
     const duration = Date.now() - startTime;
 
-    logger.info('Vault setup completed successfully', {
+    logger.info({
       duration: `${duration}ms`,
       secretsCreated: Object.keys(SAMPLE_SECRETS).length,
-    });
+    }, 'Vault setup completed successfully');
 
     console.log('\n✓ Vault setup completed successfully!');
     console.log('\nNext steps:');
@@ -235,10 +235,10 @@ async function setupVault(): Promise<void> {
     console.log('3. Check health endpoint: http://localhost:3000/health');
     console.log('\nVault UI: http://localhost:8200/ui (token: root)');
   } catch (error) {
-    logger.error('Vault setup failed', {
+    logger.error({
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-    });
+    }, 'Vault setup failed');
 
     console.error('\n✗ Vault setup failed!');
     console.error('\nTroubleshooting:');

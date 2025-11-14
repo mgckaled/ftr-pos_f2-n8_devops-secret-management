@@ -8,6 +8,7 @@ import {
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
+  jsonSchemaTransform,
 } from 'fastify-type-provider-zod';
 import secretsPlugin from './plugins/secrets.plugin.js';
 import { healthRoutes } from './modules/health/health.routes.js';
@@ -58,14 +59,15 @@ export async function buildApp() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"], // Scalar UI requires inline scripts
-        styleSrc: ["'self'", "'unsafe-inline'"], // Scalar UI requires inline styles
-        imgSrc: ["'self'", 'data:', 'https:'],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'blob:'], // Scalar requires eval and blob
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
         connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
+        fontSrc: ["'self'", 'data:'],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
         frameSrc: ["'none'"],
+        workerSrc: ["'self'", 'blob:'], // Scalar may use web workers
       },
     },
     hsts: {
@@ -108,6 +110,7 @@ export async function buildApp() {
         { name: 'Providers', description: 'Provider comparisons' },
       ],
     },
+    transform: jsonSchemaTransform,
   });
 
   // Scalar UI (modern API documentation)
